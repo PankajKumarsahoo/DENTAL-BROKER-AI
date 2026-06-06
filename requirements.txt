@@ -12,6 +12,7 @@ chromadb
 sentence-transformers
 transformers
 torch
+torchvision
 
 huggingface-hub
 
@@ -30,6 +31,7 @@ tiktoken
 
 plotly
 
-protobuf
+protobuf==5.29.5
+grpcio
 
 tqdm
