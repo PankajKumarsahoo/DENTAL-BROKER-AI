@@ -189,13 +189,14 @@
 #         print(answer)
 #         print("-" * 60)
 #------------------------------------------------------------------------------
+
+
 import os
 from dotenv import load_dotenv
 
 from langchain_groq import ChatGroq
 from rag.retriever import retriever
 
-print("Retriever Loaded:", retriever)
 # =====================================
 # LOAD ENVIRONMENT VARIABLES
 # =====================================
@@ -206,7 +207,7 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 if not GROQ_API_KEY:
     raise ValueError(
-        "GROQ_API_KEY not found in .env file"
+        "GROQ_API_KEY not found in .env file."
     )
 
 print("\n===================================")
@@ -215,7 +216,7 @@ print("Using Groq + Chroma RAG")
 print("===================================")
 
 # =====================================
-# LLM
+# LOAD LLM
 # =====================================
 
 llm = ChatGroq(
@@ -233,80 +234,56 @@ chat_history = []
 MAX_HISTORY = 6
 
 # =====================================
-# FORMAT SOURCES
-# =====================================
-
-def get_sources(docs):
-
-    sources = []
-
-    for doc in docs:
-
-        title = doc.metadata.get("title", "Unknown Title")
-        url = doc.metadata.get("url", "")
-
-        if url:
-            sources.append(
-                f"• {title}\n  {url}"
-            )
-
-    return "\n".join(list(set(sources)))
-
-
-# =====================================
 # ASK QUESTION
 # =====================================
 
 def ask_question(question):
 
+    global chat_history
+
     try:
 
-        # -----------------------------
-        # Retrieve Documents
-        # -----------------------------
+        # Retrieve documents
 
         docs = retriever.invoke(question)
 
         if not docs:
-            return "No relevant information found."
+            return "I could not find that information in the database."
 
-        # -----------------------------
-        # Context
-        # -----------------------------
+        # Build context
 
         context = "\n\n".join(
-            [doc.page_content for doc in docs]
+            doc.page_content
+            for doc in docs
         )
 
-        # -----------------------------
-        # Previous Chat History
-        # -----------------------------
+        # Previous history
 
         history_text = "\n".join(
             chat_history[-MAX_HISTORY:]
         )
 
-        # -----------------------------
         # Prompt
-        # -----------------------------
 
         prompt = f"""
 You are Dental Broker Florida AI Assistant.
 
-Your job is to answer questions ONLY from the provided database context.
+Answer ONLY using the provided database context.
 
 RULES:
 
-1. Use ONLY the provided context.
-2. Never invent information.
-3. If information is missing, say:
+1. Never make up information.
+
+2. Use ONLY the provided context.
+
+3. If the answer does not exist, say:
 
 "I could not find that information in the database."
 
-4. When listing properties include:
-   - Property Name
-   - Price
-   - Location
+4. Property questions should include:
+- Property Name
+- Price
+- Location
 
 5. Be concise and professional.
 
@@ -322,17 +299,13 @@ USER QUESTION:
 ANSWER:
 """
 
-        # -----------------------------
-        # LLM Response
-        # -----------------------------
+        # Generate response
 
         response = llm.invoke(prompt)
 
-        answer = response.content
+        answer = response.content.strip()
 
-        # -----------------------------
-        # Save Conversation Memory
-        # -----------------------------
+        # Save memory
 
         chat_history.append(
             f"User: {question}"
@@ -342,32 +315,18 @@ ANSWER:
             f"Assistant: {answer}"
         )
 
-        # -----------------------------
-        # Sources
-        # -----------------------------
+        # Keep memory small
 
-        source_text = get_sources(docs)
+        if len(chat_history) > 20:
+            chat_history = chat_history[-20:]
 
-        final_answer = f"""
-{answer}
+        # Return answer only
 
---------------------------------------------------
-
-SOURCES
-
-{source_text}
-"""
-
-        return final_answer
+        return answer
 
     except Exception as e:
 
-        return f"""
-ERROR
-
-{str(e)}
-"""
-
+        return f"Error: {str(e)}"
 
 # =====================================
 # CLEAR MEMORY
@@ -379,19 +338,21 @@ def clear_memory():
 
     chat_history = []
 
-    print("\nChat memory cleared.\n")
-
+    print("Chat memory cleared.")
 
 # =====================================
-# MAIN LOOP
+# TEST MODE
 # =====================================
 
 if __name__ == "__main__":
 
-    print("\nCommands:")
-    print("exit  -> quit chatbot")
-    print("clear -> clear memory")
-    print()
+    print("=" * 60)
+    print("Dental Broker Florida AI")
+    print("=" * 60)
+
+    print("Commands:")
+    print("exit")
+    print("clear")
 
     while True:
 
@@ -409,7 +370,7 @@ if __name__ == "__main__":
 
         answer = ask_question(question)
 
-        print("\nAnswer:")
+        print("\nAnswer:\n")
         print(answer)
 
-        print("\n" + "=" * 70)
+        print("\n" + "=" * 60)
